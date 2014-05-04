@@ -37,7 +37,7 @@ function community_solr_plugin_search($hook, $type, $return, $params) {
 	$params['fq']['subtype'] = 'subtype:plugin_project';
 	
 	if (($category = get_input('category')) && ($category != 'all')) {
-		$params['fq']['plugincat'] = 'tags:"' . elgg_solr_escape_special_chars('plugincat%%' . $params['query']) . '"';
+		$params['fq']['plugincat'] = 'tags:"' . elgg_solr_escape_special_chars('plugincat%%' . $category) . '"';
 	}
 
 	$default_fq = elgg_solr_get_default_fq($params);
