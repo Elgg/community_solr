@@ -13,10 +13,8 @@ function community_solr_init() {
 
 
 function community_solr_plugin_search($hook, $type, $return, $params) {
-	$params['query'] = elgg_solr_escape_special_chars($params['query']);
 
     $select = array(
-        'query'  => "title:{$params['query']}^2 OR description:{$params['query']}^1",
         'start'  => $params['offset'],
         'rows'   => $params['limit'],
         'fields' => array('id','title','description')
@@ -31,6 +29,21 @@ function community_solr_plugin_search($hook, $type, $return, $params) {
 		'score' => 'desc',
 		'time_created' => 'desc'
 	));
+	
+	$title_boost = elgg_solr_get_title_boost();
+	$description_boost = elgg_solr_get_description_boost();
+	
+	// get the dismax component and set a boost query
+	$dismax = $query->getDisMax();
+	$dismax->setQueryFields("name^{$title_boost} description^{$description_boost}");
+	
+	$boostQuery = elgg_solr_get_boost_query();
+	if ($boostQuery) {
+		$dismax->setBoostQuery($boostQuery);
+	}
+	
+	// this query is now a dismax query
+	$query->setQuery($params['query']);
 	
 	// make sure we're only getting objects:plugin_project
 	$params['fq']['type'] = 'type:object';
