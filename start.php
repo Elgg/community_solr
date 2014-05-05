@@ -35,7 +35,7 @@ function community_solr_plugin_search($hook, $type, $return, $params) {
 	
 	// get the dismax component and set a boost query
 	$dismax = $query->getDisMax();
-	$dismax->setQueryFields("name^{$title_boost} description^{$description_boost}");
+	$dismax->setQueryFields("title^{$title_boost} description^{$description_boost}");
 	
 	$boostQuery = elgg_solr_get_boost_query();
 	if ($boostQuery) {
