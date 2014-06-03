@@ -1,0 +1,21 @@
+{
+    "name": "elgg/community_solr",
+    "description": "Custom hooks for solr search",
+    "type": "elgg-plugin",
+    "keywords": [
+        "elgg",
+        "plugin"
+    ],
+    "homepage": "http://community.elgg.org/",
+    "license": "GPL-2.0",
+    "authors": [
+        {
+            "name": "Matt Beckett (matt@arckinteractive.com)",
+            "homepage": "http://community.elgg.org/",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "composer/installers": ">=1.0.8"
+    }
+}
