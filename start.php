@@ -7,6 +7,7 @@ function community_solr_init() {
 	elgg_unregister_plugin_hook_handler('search', 'object:plugin_project', 'plugins_search_hook');
 	
 	elgg_register_plugin_hook_handler('search', 'object:plugin_project', 'community_solr_plugin_search');
+	elgg_register_plugin_hook_handler('elgg_solr:index', 'object', 'community_solr_plugin_index');
 	
 	elgg_solr_register_solr_entity_type('object', 'plugin_project', 'community_solr_add_update_plugin');
 }
@@ -147,38 +148,40 @@ function community_solr_plugin_search($hook, $type, $return, $params) {
 }
 
 
-/**
- * Defines how we index plugins in the solr schema
- * 
- * @param type $entity
- * @return boolean
- */
-function community_solr_add_update_plugin($entity) {
-	   
-	if (!is_registered_entity_type($entity->type, $entity->getSubtype())) {
-		return false;
+
+function community_solr_plugin_index($h, $t, $doc, $p) {
+	if (!elgg_instanceof($p['entity'], 'object', 'plugin_project')) {
+		return $doc;
 	}
 	
-	$client = elgg_solr_get_client();
-	$commit = elgg_get_config('elgg_solr_nocommit') ? false : true;
-	
-	$query = $client->createUpdate();
+	$entity = $p['entity'];
 	
 	// add brief description to the full description
 	$description = trim($entity->summary . ' ' . $entity->description);
-	
-	// add document
-	$doc = $query->createDocument();
-	$doc->id = $entity->guid;
-	$doc->type = $entity->type;
-	$doc->subtype = $entity->getSubtype();
-	$doc->owner_guid = $entity->owner_guid;
-	$doc->container_guid = $entity->container_guid;
-	$doc->access_id = $entity->access_id;
-	$doc->title = $entity->title;
-	$doc->name = $entity->name;
 	$doc->description = $description;
-	$doc->time_created = $entity->time_created;
+	
+	// use generic fields for some filter queries
+	// eg.
+	// elgg_string1 = elgg_version
+	$releases = $entity->getReleases(array('limit' => false));
+	$elgg_versions = array();
+	if ($releases) {
+		foreach ($releases as $release) {
+			if (is_array($release->elgg_version)) {
+				foreach ($release->elgg_version as $version) {
+					$elgg_versions[] = $version;
+				}
+			}
+			else {
+				$elgg_versions[] = $release->elgg_version;
+			}
+		}
+	}
+	
+	$doc->elgg_string1 = array_unique($elgg_versions);
+	$doc->elgg_string2 = $entity->plugin_type;
+	$doc->elgg_string3 = $entity->plugincat;
+	$doc->elgg_string4 = $entity->license;
 	
 	// store category with the tags
 	$categoryname = 'plugincat';
@@ -199,18 +202,6 @@ function community_solr_add_update_plugin($entity) {
 		// wants to use registered tag names
 		elgg_set_config('registered_tag_metadata_names', $md);
 	}
-				
-	$query->addDocument($doc);
-	if ($commit) {
-		$query->addCommit($commit);
-	}
-
-	// this executes the query and returns the result
-	try {
-		$client->update($query);	
-	} catch (Exception $exc) {
-		error_log($exc->getMessage());
-	}
-		
-	return true;
+	
+	return $doc;
 }
