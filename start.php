@@ -1,19 +1,20 @@
 <?php
 
-elgg_register_event_handler('init', 'system', 'community_solr_init');
+namespace community\solr;
 
-function community_solr_init() {
+elgg_register_event_handler('init', 'system', __NAMESPACE__ . '\\init');
+
+function init() {
 	// remove the default plugin hook
 	elgg_unregister_plugin_hook_handler('search', 'object:plugin_project', 'plugins_search_hook');
 	
-	elgg_register_plugin_hook_handler('search', 'object:plugin_project', 'community_solr_plugin_search');
-	elgg_register_plugin_hook_handler('elgg_solr:index', 'object', 'community_solr_plugin_index');
-	
-	elgg_solr_register_solr_entity_type('object', 'plugin_project', 'community_solr_add_update_plugin');
+	elgg_register_plugin_hook_handler('search', 'object:plugin_project', __NAMESPACE__ . '\\plugin_search');
+	elgg_register_plugin_hook_handler('elgg_solr:index', 'object', __NAMESPACE__ . '\\plugin_index');
+	elgg_register_plugin_hook_handler('route', 'plugins', __NAMESPACE__ . '\\plugins_router');
 }
 
 
-function community_solr_plugin_search($hook, $type, $return, $params) {
+function plugin_search($hook, $type, $return, $params) {
 
     $select = array(
         'start'  => $params['offset'],
@@ -149,7 +150,7 @@ function community_solr_plugin_search($hook, $type, $return, $params) {
 
 
 
-function community_solr_plugin_index($h, $t, $doc, $p) {
+function plugin_index($h, $t, $doc, $p) {
 	if (!elgg_instanceof($p['entity'], 'object', 'plugin_project')) {
 		return $doc;
 	}
@@ -178,10 +179,13 @@ function community_solr_plugin_index($h, $t, $doc, $p) {
 		}
 	}
 	
+	$screenshots = $entity->getScreenshots();
+	
 	$doc->elgg_string1 = array_unique($elgg_versions);
 	$doc->elgg_string2 = $entity->plugin_type;
 	$doc->elgg_string3 = $entity->plugincat;
 	$doc->elgg_string4 = $entity->license;
+	$doc->elgg_string5 = $screenshots ? 1 : 0;
 	
 	// store category with the tags
 	$categoryname = 'plugincat';
@@ -204,4 +208,14 @@ function community_solr_plugin_index($h, $t, $doc, $p) {
 	}
 	
 	return $doc;
+}
+
+
+function plugins_router($h, $t, $r, $p) {
+	if ($r['segments'][0] == 'search' && !isset($r['segments'][1])) {
+		include __DIR__ . '/pages/plugins/search.php';
+		return false;
+	}
+	
+	return $r;
 }
