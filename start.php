@@ -38,6 +38,7 @@ function plugin_search($hook, $type, $return, $params) {
 	// get the dismax component and set a boost query
 	$dismax = $query->getDisMax();
 	$dismax->setQueryFields("title^{$title_boost} description^{$description_boost}");
+	$dismax->setQueryAlternative('*:*')
 	
 	$boostQuery = elgg_solr_get_boost_query();
 	if ($boostQuery) {
