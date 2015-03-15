@@ -67,7 +67,7 @@ if (is_array($filters) && !empty($filters)) {
 							$list .= '"' . $v . '"';
 						}
 						
-						$solr_params['fq']['cat'] = 'elgg_string3:(' . $list . ')';
+						$solr_params['fq']['cat'] = 'plugincat_s:(' . $list . ')';
                 	}
             	}
                 break;
@@ -81,7 +81,7 @@ if (is_array($filters) && !empty($filters)) {
 							$list .= '"' . $v . '"';
 						}
 						
-						$solr_params['fq']['license'] = 'elgg_string4:(' . $list . ')';
+						$solr_params['fq']['license'] = 'license_s:(' . $list . ')';
                 	}
             	}
                 break;
@@ -95,14 +95,14 @@ if (is_array($filters) && !empty($filters)) {
 							$list .= '"' . $v . '"';
 						}
 						
-						$solr_params['fq']['version'] = 'elgg_string1:(' . $list . ')';
+						$solr_params['fq']['version'] = 'version_ss:(' . $list . ')';
                 	}
             	}
             	break;
             case 's' :
             	if (isset($settings['screenshot']) && $settings['screenshot'] == 'enabled') {
                 	// Only with screenshot
-                	$solr_params['fq']['screenshot'] = 'elgg_string5:1';
+                	$solr_params['fq']['screenshot'] = 'screenshots_i:1';
             	}
             	break;
         }

@@ -1,0 +1,8 @@
+== Version History ==
+
+x.x (mm/dd/yyyy):
+
+
+1.2 (03/14/2015):
+ - index plugin project when release is updated
+ - update project fields to dynamic fields

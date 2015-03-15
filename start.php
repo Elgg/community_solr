@@ -11,6 +11,10 @@ function init() {
 	elgg_register_plugin_hook_handler('search', 'object:plugin_project', __NAMESPACE__ . '\\plugin_search');
 	elgg_register_plugin_hook_handler('elgg_solr:index', 'object', __NAMESPACE__ . '\\plugin_index');
 	elgg_register_plugin_hook_handler('route', 'plugins', __NAMESPACE__ . '\\plugins_router');
+	
+	// when a plugin release gets created/updated we should reindex the project
+	elgg_register_event_handler('create', 'object', __NAMESPACE__ . '\\plugin_release_update');
+	elgg_register_event_handler('update', 'object', __NAMESPACE__ . '\\plugin_release_update');
 }
 
 
@@ -21,23 +25,35 @@ function plugin_search($hook, $type, $return, $params) {
         'rows'   => $params['limit'],
         'fields' => array('id','title','description')
     );
+	
+	if ($params['select'] && is_array($params['select'])) {
+		$select = array_merge($select, $params['select']);
+	}
 
     // create a client instance
     $client = elgg_solr_get_client();
 
     // get an update query instance
     $query = $client->createSelect($select);
-	$query->addSorts(array(
+	$sorts = array(
 		'score' => 'desc',
 		'time_created' => 'desc'
-	));
+	);
+	if ($params['sorts'] && is_array($params['sorts'])) {
+		$sorts = $params['sorts'];
+	}
+	$query->addSorts($sorts);
 	
 	$title_boost = elgg_solr_get_title_boost();
 	$description_boost = elgg_solr_get_description_boost();
 	
 	// get the dismax component and set a boost query
 	$dismax = $query->getDisMax();
-	$dismax->setQueryFields("title^{$title_boost} description^{$description_boost}");
+	$qf = "title^{$title_boost} description^{$description_boost}";
+	if ($params['qf']) {
+		$qf = $params['qf'];
+	}
+	$dismax->setQueryFields($qf);
 	$dismax->setQueryAlternative('*:*');
 	
 	$boostQuery = elgg_solr_get_boost_query();
@@ -152,6 +168,10 @@ function plugin_search($hook, $type, $return, $params) {
 
 
 function plugin_index($h, $t, $doc, $p) {
+	if (!$doc) {
+		return $doc; // something else prevented this index
+	}
+	
 	if (!elgg_instanceof($p['entity'], 'object', 'plugin_project')) {
 		return $doc;
 	}
@@ -164,7 +184,6 @@ function plugin_index($h, $t, $doc, $p) {
 	
 	// use generic fields for some filter queries
 	// eg.
-	// elgg_string1 = elgg_version
 	$releases = $entity->getReleases(array('limit' => false));
 	$elgg_versions = array();
 	if ($releases) {
@@ -182,11 +201,11 @@ function plugin_index($h, $t, $doc, $p) {
 	
 	$screenshots = $entity->getScreenshots();
 	
-	$doc->elgg_string1 = array_unique($elgg_versions);
-	$doc->elgg_string2 = $entity->plugin_type;
-	$doc->elgg_string3 = $entity->plugincat;
-	$doc->elgg_string4 = $entity->license;
-	$doc->elgg_string5 = $screenshots ? 1 : 0;
+	$doc->version_ss = array_unique($elgg_versions);
+	$doc->plugin_type_s = $entity->plugin_type;
+	$doc->plugincat_s = $entity->plugincat;
+	$doc->license_s = $entity->license;
+	$doc->screenshots_i = $screenshots ? 1 : 0;
 	
 	// store category with the tags
 	$categoryname = 'plugincat';
@@ -219,4 +238,15 @@ function plugins_router($h, $t, $r, $p) {
 	}
 	
 	return $r;
+}
+
+
+function plugin_release_update($event, $type, $release) {
+	if (!elgg_instanceof($release, 'object', 'plugin_release')) {
+		return true;
+	}
+	
+	$project = $release->getProject();
+	// reindex the project when the release is updated or created
+	elgg_solr_add_update_entity('update', $project->type, $project);
 }
